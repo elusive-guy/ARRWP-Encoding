@@ -11,6 +11,8 @@ def set_cfg_posenc(cfg):
     cfg.posenc_LapPE = CN()
     cfg.posenc_SignNet = CN()
     cfg.posenc_RWSE = CN()
+    cfg.posenc_ARWPE = CN()
+    cfg.posenc_ARWSE = CN()
     cfg.posenc_HKdiagSE = CN()
     cfg.posenc_ElstaticSE = CN()
     cfg.posenc_EquivStableLapPE = CN()
@@ -21,8 +23,9 @@ def set_cfg_posenc(cfg):
 
     # Common arguments to all PE types.
     for name in ['posenc_LapPE', 'posenc_SignNet',
-                 'posenc_RWSE', 'posenc_HKdiagSE', 'posenc_ElstaticSE',
-                  'posenc_ERN', 'posenc_ERE']:
+                 'posenc_RWSE', 'posenc_ARWPE', 'posenc_ARWSE',
+                 'posenc_HKdiagSE', 'posenc_ElstaticSE',
+                 'posenc_ERN', 'posenc_ERE']:
         pecfg = getattr(cfg, name)
 
         # Use extended positional encodings
@@ -87,6 +90,13 @@ def set_cfg_posenc(cfg):
         # Python snippet to generate `posenc.kernel.times`, e.g. 'range(1, 17)'
         # If set, it will be executed via `eval()` and override posenc.kernel.times
         pecfg.kernel.times_func = ''
+
+    # Additional arguments for ARWPE and ARWSE.
+    for name in ['posenc_ARWPE', 'posenc_ARWSE']:
+        pecfg = getattr(cfg, name)
+
+        pecfg.window_size = None
+        pecfg.scale = True
 
     # Override default, electrostatic kernel has fixed set of 10 measures.
     cfg.posenc_ElstaticSE.kernel.times_func = 'range(10)'

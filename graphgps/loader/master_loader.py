@@ -29,6 +29,8 @@ from graphgps.transform.transforms import (pre_transform_in_memory,
                                            typecast_x, concat_x_and_pos,
                                            clip_graphs_to_size, move_node_feat_to_x)
 from graphgps.transform.expander_edges import generate_random_expander
+from graphgps.transform.random_walks import simulate_random_walks
+# from graphgps.transform.approx_rw_transforms import calculate_arrwp_matrix
 from graphgps.transform.dist_transforms import (add_dist_features, add_reverse_edges,
                                                  add_self_loops, effective_resistances, 
                                                  effective_resistance_embedding,
@@ -209,6 +211,35 @@ def load_dataset_master(format, name, dataset_dir):
         raise ValueError(f"Unknown data format: {format}")
     log_loaded_dataset(dataset, format, name)
 
+    if cfg.debug:
+        dataset = dataset[:10]
+        dataset.split_idxs = [
+            [0, 1, 2, 3, 4],
+            [5, 6, 7],
+            [8, 9],
+        ]
+    print("debug mode:", cfg.debug)
+
+    # adding random walks
+    if cfg.prep.random_walks.enable:
+        start = time.perf_counter()
+        logging.info(f"Adding random walks ...")
+        pre_transform_in_memory(dataset,
+                                partial(simulate_random_walks,
+                                        walk_length=cfg.prep.random_walks.walk_length,
+                                        n_walks=cfg.prep.random_walks.n_walks,
+                                        p=cfg.prep.random_walks.p,
+                                        q=cfg.prep.random_walks.q,
+                                        workers=cfg.prep.random_walks.workers,
+                                        verbose=cfg.prep.random_walks.verbose,
+                                        rand_seed=cfg.seed),
+                                show_progress=True
+                                )
+        elapsed = time.perf_counter() - start
+        timestr = time.strftime('%H:%M:%S', time.gmtime(elapsed)) \
+                    + f'{elapsed:.2f}'[-3:]
+        logging.info(f"Done! Took {timestr}")
+
     # Precompute necessary statistics for positional encodings.
     pe_enabled_list = []
     for key, pecfg in cfg.items():
@@ -259,6 +290,22 @@ def load_dataset_master(format, name, dataset_dir):
             timestr = time.strftime('%H:%M:%S', time.gmtime(elapsed)) \
                       + f'{elapsed:.2f}'[-3:]
             logging.info(f"Done! Took {timestr}")
+
+
+    # # adding arrwp matrix
+    # if cfg.prep.arrwp.enable:
+    #     start = time.perf_counter()
+    #     logging.info(f"Adding arrwp matrix ...")
+    #     pre_transform_in_memory(dataset,
+    #                             partial(calculate_arrwp_matrix,
+    #                                     window_size=cfg.arrwp_encoding.window_size,
+    #                                     scale=cfg.arrwp_encoding.scale),
+    #                             show_progress=True
+    #                             )
+    #     elapsed = time.perf_counter() - start
+    #     timestr = time.strftime('%H:%M:%S', time.gmtime(elapsed)) \
+    #                 + f'{elapsed:.2f}'[-3:]
+    #     logging.info(f"Done! Took {timestr}")
 
 
     # adding shortest path features

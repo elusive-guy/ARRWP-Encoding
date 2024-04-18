@@ -1,0 +1,72 @@
+out_dir: results
+metric_best: mae
+metric_agg: argmin
+debug: True
+dataset:
+  format: OGB
+  name: peptides-structural
+  task: graph
+  task_type: regression
+  transductive: False
+  node_encoder: True
+  node_encoder_name: Atom+ARWPE+ARWSE
+  node_encoder_bn: False
+  edge_encoder: True
+  edge_encoder_name: Bond
+  edge_encoder_bn: False
+prep:
+  exp: True
+  exp_deg: 1
+  use_exp_edges: False
+  add_edge_index: True # Set True if you want to add real edges beside expander edges
+  num_virt_node: 1 # Set True if you want to add global node connections beside expander edges
+
+  random_walks:
+    enable: True
+    walk_length: 10
+    n_walks: 20
+    p: 1.0
+    q: 1.0
+    verbose: False
+# posenc_RWSE:
+#   enable: True
+#   kernel:
+#     times: [1, 2, 3]
+posenc_ARWPE:
+  enable: True
+  model: linear
+  dim_pe: 8
+  window_size: 6
+  scale: True
+posenc_ARWSE:
+  enable: True
+  model: linear
+  dim_pe: 8
+  window_size: 6
+  scale: True
+train:
+  mode: custom
+  batch_size: 4
+  eval_period: 1
+  ckpt_period: 100
+model:
+  type: MultiModel
+  loss_fun: l1
+  graph_pooling: mean
+gt:
+  layer_type: CustomGatedGCN+Exphormer
+  layers: 2
+  n_heads: 1
+  dim_hidden: 32  # `gt.dim_hidden` must match `gnn.dim_inner`
+  dropout: 0.12
+  attn_dropout: 0.5
+  layer_norm: False
+  batch_norm: True
+gnn:
+  head: default
+  layers_pre_mp: 0
+  layers_post_mp: 1  # Not used when `gnn.head: san_graph`
+  dim_inner: 32  # `gt.dim_hidden` must match `gnn.dim_inner`
+  batchnorm: True
+  act: relu
+  dropout: 0.12

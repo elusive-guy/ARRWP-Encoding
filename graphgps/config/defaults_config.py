@@ -31,3 +31,6 @@ def extended_cfg(cfg):
     # always checkpoint the current best model based on validation performance,
     # instead, when False, follow cfg.train.eval_period checkpointing frequency.
     cfg.train.ckpt_best = False
+
+    # Debug mode enabling.
+    cfg.debug = False

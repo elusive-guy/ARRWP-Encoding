@@ -11,7 +11,7 @@ class KernelPENodeEncoder(torch.nn.Module):
     setting of `kernel_type`. Based on this, the appropriate config is selected,
     and also the appropriate variable with precomputed kernel stats is then
     selected from PyG Data graphs in `forward` function.
-    E.g., supported are 'RWSE', 'HKdiagSE', 'ElstaticSE'.
+    E.g., supported are 'RWSE', 'ARWPE', 'ARWSE', 'HKdiagSE', 'ElstaticSE'.
 
     PE of size `dim_pe` will get appended to each node feature vector.
     If `expand_x` set True, original node features will be first linearly
@@ -35,7 +35,8 @@ class KernelPENodeEncoder(torch.nn.Module):
 
         pecfg = getattr(cfg, f"posenc_{self.kernel_type}")
         dim_pe = pecfg.dim_pe  # Size of the kernel-based PE embedding
-        num_rw_steps = len(pecfg.kernel.times)
+        num_rw_steps = len(pecfg.kernel.times)\
+            if "window_size" not in pecfg else pecfg["window_size"]
         model_type = pecfg.model.lower()  # Encoder NN model type for PEs
         n_layers = pecfg.layers  # Num. layers in PE encoder model
         norm_type = pecfg.raw_norm_type.lower()  # Raw PE normalization layer type
@@ -106,6 +107,20 @@ class RWSENodeEncoder(KernelPENodeEncoder):
     """Random Walk Structural Encoding node encoder.
     """
     kernel_type = 'RWSE'
+
+
+@register_node_encoder('ARWPE')
+class ARWPENodeEncoder(KernelPENodeEncoder):
+    """Approximated Random Walk Positional Encoding node encoder.
+    """
+    kernel_type = 'ARWPE'
+
+
+@register_node_encoder('ARWSE')
+class ARWSENodeEncoder(KernelPENodeEncoder):
+    """Approximated Random Walk Structural Encoding node encoder.
+    """
+    kernel_type = 'ARWSE'
 
 
 @register_node_encoder('HKdiagSE')

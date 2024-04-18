@@ -5,7 +5,7 @@ from torch_geometric.graphgym.register import register_node_encoder
 
 from graphgps.encoder.ast_encoder import ASTNodeEncoder
 from graphgps.encoder.kernel_pos_encoder import RWSENodeEncoder, \
-    HKdiagSENodeEncoder, ElstaticSENodeEncoder
+    ARWPENodeEncoder, ARWSENodeEncoder, HKdiagSENodeEncoder, ElstaticSENodeEncoder
 from graphgps.encoder.laplace_pos_encoder import LapPENodeEncoder
 from graphgps.encoder.ppa_encoder import PPANodeEncoder
 from graphgps.encoder.signnet_pos_encoder import SignNetNodeEncoder
@@ -110,6 +110,8 @@ ds_encs = {'Atom': AtomEncoder,
 # Positional Encoding node encoders.
 pe_encs = {'LapPE': LapPENodeEncoder,
            'RWSE': RWSENodeEncoder,
+           'ARWPE': ARWPENodeEncoder,
+           'ARWSE': ARWSENodeEncoder,
            'HKdiagSE': HKdiagSENodeEncoder,
            'ElstaticSE': ElstaticSENodeEncoder,
            'SignNet': SignNetNodeEncoder,
@@ -124,6 +126,22 @@ for ds_enc_name, ds_enc_cls in ds_encs.items():
             concat_node_encoders([ds_enc_cls, pe_enc_cls],
                                  [pe_enc_name])
         )
+
+    pe_names = ['ARWPE', 'ARWSE']
+    for pe_enc_name1, pe_enc_cls1 in pe_encs.items():
+        for pe_enc_name2, pe_enc_cls2 in pe_encs.items():
+            if pe_enc_name1 not in pe_names\
+               or pe_enc_name2 not in pe_names:
+                continue
+            
+            if pe_enc_name1 != pe_enc_name2:
+                register_node_encoder(
+                    f"{ds_enc_name}+{pe_enc_name1}+{pe_enc_name2}",
+                    concat_node_encoders(
+                        [ds_enc_cls, pe_enc_cls1, pe_enc_cls2],
+                        [pe_enc_name1, pe_enc_name2],
+                    )
+                )
 
 # Combine both LapPE and RWSE positional encodings.
 for ds_enc_name, ds_enc_cls in ds_encs.items():

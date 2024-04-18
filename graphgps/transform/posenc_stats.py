@@ -9,6 +9,9 @@ from torch_geometric.utils import (get_laplacian, to_scipy_sparse_matrix,
 from torch_geometric.utils.num_nodes import maybe_num_nodes
 from torch_scatter import scatter_add
 
+from graphgps.transform.approx_rw_transforms import (calculate_arwpe_matrix,
+                                                    calculate_arwse_matrix)
+
 
 def compute_posenc_stats(data, pe_types, is_undirected, cfg):
     """Precompute positional encodings for the given graph.
@@ -16,6 +19,9 @@ def compute_posenc_stats(data, pe_types, is_undirected, cfg):
     Supported PE statistics to precompute, selected by `pe_types`:
     'LapPE': Laplacian eigen-decomposition.
     'RWSE': Random walk landing probabilities (diagonals of RW matrices).
+    'ARWPE': Approximated Random Walk Positional Encoding (columns sum of ARW
+        matrices except diagonals)
+    'ARWSE': Approximated Random Walk Structural Encoding (diagonals of ARW matrices)
     'HKfullPE': Full heat kernels and their diagonals. (NOT IMPLEMENTED)
     'HKdiagSE': Diagonals of heat kernel diffusion.
     'ElstaticSE': Kernel based on the electrostatic interaction between nodes.
@@ -32,7 +38,8 @@ def compute_posenc_stats(data, pe_types, is_undirected, cfg):
     """
     # Verify PE types.
     for t in pe_types:
-        if t not in ['LapPE', 'EquivStableLapPE', 'SignNet', 'RWSE', 'HKdiagSE', 'HKfullPE', 'ElstaticSE', 'ERN']:
+        if t not in ['LapPE', 'EquivStableLapPE', 'SignNet', 'RWSE', 'ARWPE', 'ARWSE', 
+                     'HKdiagSE', 'HKfullPE', 'ElstaticSE', 'ERN']:
             raise ValueError(f"Unexpected PE stats selection {t} in {pe_types}")
 
     # Basic preprocessing of the input graph.
@@ -94,6 +101,30 @@ def compute_posenc_stats(data, pe_types, is_undirected, cfg):
                                           edge_index=data.edge_index,
                                           num_nodes=N)
         data.pestat_RWSE = rw_landing
+
+    # Approximated Random Walk Positional Encoding
+    if 'ARWPE' in pe_types:
+        if not hasattr(data, 'random_walks'):
+            raise ValueError('random walks not stored in data')
+        arwpe = calculate_arwpe_matrix(
+            walks=data.random_walks,
+            num_nodes=data.num_nodes,
+            window_size=cfg.posenc_ARWPE.window_size,
+            scale=cfg.posenc_ARWPE.scale,
+        )
+        data.pestat_ARWPE = arwpe
+
+    # Approximated Random Walks Structural Encoding.
+    if 'ARWSE' in pe_types:
+        if not hasattr(data, 'random_walks'):
+            raise ValueError('random walks not stored in data')
+        arwse = calculate_arwse_matrix(
+            walks=data.random_walks,
+            num_nodes=data.num_nodes,
+            window_size=cfg.posenc_ARWSE.window_size,
+            scale=cfg.posenc_ARWSE.scale,
+        )
+        data.pestat_ARWSE = arwse
 
     # Heat Kernels.
     if 'HKdiagSE' in pe_types or 'HKfullPE' in pe_types:

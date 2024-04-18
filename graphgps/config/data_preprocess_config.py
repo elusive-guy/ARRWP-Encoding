@@ -1,3 +1,5 @@
+import psutil
+
 from torch_geometric.graphgym.register import register_config
 from yacs.config import CfgNode as CN
 
@@ -23,6 +25,20 @@ def set_cfg_preprocess(cfg):
     cfg.prep.add_reverse_edges = True
     cfg.prep.train_percent = 0.6
     cfg.prep.layer_edge_indices_dir = None
+
+
+
+    # Argument group for adding random walks
+
+    # if it's enabled, random walks would be available by e.g. data.random_walks
+    cfg.prep.random_walks = CN()
+    cfg.prep.random_walks.enable = False
+    cfg.prep.random_walks.walk_length = None
+    cfg.prep.random_walks.n_walks = None
+    cfg.prep.random_walks.p = 1.0
+    cfg.prep.random_walks.q = 1.0
+    cfg.prep.random_walks.workers = psutil.cpu_count()
+    cfg.prep.random_walks.verbose = False
 
 
 
