@@ -9,8 +9,9 @@ from torch_geometric.utils import (get_laplacian, to_scipy_sparse_matrix,
 from torch_geometric.utils.num_nodes import maybe_num_nodes
 from torch_scatter import scatter_add
 
-from graphgps.transform.approx_rw_transforms import (calculate_arwpe_matrix,
-                                                    calculate_arwse_matrix)
+from graphgps.transform.approx_rw_transforms import (calculate_arrwpe_stats,
+                                                     calculate_arwpe_matrix,
+                                                     calculate_arwse_matrix)
 
 
 def compute_posenc_stats(data, pe_types, is_undirected, cfg):
@@ -19,6 +20,7 @@ def compute_posenc_stats(data, pe_types, is_undirected, cfg):
     Supported PE statistics to precompute, selected by `pe_types`:
     'LapPE': Laplacian eigen-decomposition.
     'RWSE': Random walk landing probabilities (diagonals of RW matrices).
+    'ARRWPE': Approximated Relative Random Walks Probabilities Encoding
     'ARWPE': Approximated Random Walk Positional Encoding (columns sum of ARW
         matrices except diagonals)
     'ARWSE': Approximated Random Walk Structural Encoding (diagonals of ARW matrices)
@@ -38,8 +40,9 @@ def compute_posenc_stats(data, pe_types, is_undirected, cfg):
     """
     # Verify PE types.
     for t in pe_types:
-        if t not in ['LapPE', 'EquivStableLapPE', 'SignNet', 'RWSE', 'ARWPE', 'ARWSE', 
-                     'HKdiagSE', 'HKfullPE', 'ElstaticSE', 'ERN']:
+        if t not in ['LapPE', 'EquivStableLapPE', 'SignNet', 'RWSE',
+                     'ARRWPE', 'ARWPE', 'ARWSE', 'HKdiagSE', 'HKfullPE',
+                     'ElstaticSE', 'ERN']:
             raise ValueError(f"Unexpected PE stats selection {t} in {pe_types}")
 
     # Basic preprocessing of the input graph.
@@ -102,7 +105,22 @@ def compute_posenc_stats(data, pe_types, is_undirected, cfg):
                                           num_nodes=N)
         data.pestat_RWSE = rw_landing
 
-    # Approximated Random Walk Positional Encoding
+    # Approximated Relative Random Walks Probabilities Encoding.
+    if 'ARRWPE' in pe_types:
+        if not hasattr(data, 'random_walks'):
+            raise ValueError('random walks not stored in data')
+        abs_enc, rel_enc_idx, rel_enc_val = calculate_arrwpe_stats(
+            walks=data.random_walks,
+            num_nodes=data.num_nodes,
+            window_size=cfg.posenc_ARRWPE.window_size,
+            scale=cfg.posenc_ARRWPE.scale,
+            edge_index=data.edge_index,
+        )
+        data.node_arrwp = abs_enc
+        data.edge_arrwp_index = rel_enc_idx
+        data.edge_arrwp_val = rel_enc_val
+
+    # Approximated Random Walk Positional Encoding.
     if 'ARWPE' in pe_types:
         if not hasattr(data, 'random_walks'):
             raise ValueError('random walks not stored in data')

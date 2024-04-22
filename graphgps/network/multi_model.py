@@ -8,6 +8,8 @@ from torch_geometric.graphgym.register import register_network
 
 from graphgps.layer.multi_model_layer import MultiLayer, SingleLayer
 from graphgps.encoder.ER_edge_encoder import EREdgeEncoder
+from graphgps.encoder.arrwp_encoder import (ARRWPLinearNodeEncoder,
+                                            ARRWPLinearEdgeEncoder)
 from graphgps.encoder.exp_edge_fixer import ExpanderEdgeFixer
 
 
@@ -52,6 +54,20 @@ class FeatureEncoder(torch.nn.Module):
                 self.edge_encoder_bn = BatchNorm1dNode(
                     new_layer_config(cfg.gt.dim_edge, -1, -1, has_act=False,
                                     has_bias=False, cfg=cfg))
+
+        if cfg.posenc_ARRWPE.enable:
+            self.arrwp_abs_encoder = ARRWPLinearNodeEncoder(
+                cfg.posenc_ARRWPE.window_size,
+                cfg.gt.dim_hidden,
+            )
+
+            if not hasattr(cfg.gt, 'dim_edge') or cfg.gt.dim_edge is None:
+                cfg.gt.dim_edge = cfg.gt.dim_hidden
+            
+            self.arrwp_rel_encoder = ARRWPLinearEdgeEncoder(
+                cfg.posenc_ARRWPE.window_size,
+                cfg.gt.dim_edge,
+            )
 
         if 'Exphormer' in cfg.gt.layer_type:
             self.exp_edge_fixer = ExpanderEdgeFixer(add_edge_index=cfg.prep.add_edge_index, 

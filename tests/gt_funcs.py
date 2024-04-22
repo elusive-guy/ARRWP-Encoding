@@ -10,7 +10,7 @@ def gt_count_walks(walks, num_nodes, window_size):
 
 
 def gt_calculate_arrwp_matrix(
-    walks, num_nodes, window_size, scale=True,
+    walks, num_nodes, window_size, scale=True, edge_index=None,
 ):
     walk_length = walks.shape[-1]
     mx = np.zeros((num_nodes, num_nodes, window_size))
@@ -21,7 +21,16 @@ def gt_calculate_arrwp_matrix(
                 mx[s, v, k] += 1
     
     if scale:
-        mx /= np.sum(mx, axis=1, keepdims=True)
+        denum_ = np.sum(mx, axis=1, keepdims=True)
+        denum = np.where(denum_, denum_, 1)
+        mx /= denum
+
+    if edge_index is not None:
+        edge_set = set(tuple(edge.tolist()) for edge in edge_index.T)
+        print(edge_set)
+        for s, v in np.ndindex(num_nodes, num_nodes):
+            if (s, v) not in edge_set:
+                mx[s, v] = 0
     
     return mx
 

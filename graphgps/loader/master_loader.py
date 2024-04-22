@@ -30,7 +30,6 @@ from graphgps.transform.transforms import (pre_transform_in_memory,
                                            clip_graphs_to_size, move_node_feat_to_x)
 from graphgps.transform.expander_edges import generate_random_expander
 from graphgps.transform.random_walks import simulate_random_walks
-# from graphgps.transform.approx_rw_transforms import calculate_arrwp_matrix
 from graphgps.transform.dist_transforms import (add_dist_features, add_reverse_edges,
                                                  add_self_loops, effective_resistances, 
                                                  effective_resistance_embedding,
@@ -290,22 +289,6 @@ def load_dataset_master(format, name, dataset_dir):
             timestr = time.strftime('%H:%M:%S', time.gmtime(elapsed)) \
                       + f'{elapsed:.2f}'[-3:]
             logging.info(f"Done! Took {timestr}")
-
-
-    # # adding arrwp matrix
-    # if cfg.prep.arrwp.enable:
-    #     start = time.perf_counter()
-    #     logging.info(f"Adding arrwp matrix ...")
-    #     pre_transform_in_memory(dataset,
-    #                             partial(calculate_arrwp_matrix,
-    #                                     window_size=cfg.arrwp_encoding.window_size,
-    #                                     scale=cfg.arrwp_encoding.scale),
-    #                             show_progress=True
-    #                             )
-    #     elapsed = time.perf_counter() - start
-    #     timestr = time.strftime('%H:%M:%S', time.gmtime(elapsed)) \
-    #                 + f'{elapsed:.2f}'[-3:]
-    #     logging.info(f"Done! Took {timestr}")
 
 
     # adding shortest path features

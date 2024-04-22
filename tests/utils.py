@@ -24,6 +24,30 @@ def generate_walks(
     return walks
 
 
+def generate_edge_index(num_nodes, num_edges):
+    src_lst = np.random.randint(0, num_nodes, num_edges)
+    dst_lst = np.random.randint(0, num_nodes, num_edges)
+    return torch.Tensor([src_lst, dst_lst]).to(torch.long)
+
+
+def get_edge_index(walks):
+    n_walks, walk_length = walks.shape
+    
+    edges = []
+    for n_walk, step in np.ndindex(n_walks, walk_length - 1):
+        edge = walks[n_walk, step:step+2]
+        edges.append(edge)
+
+    return torch.Tensor(edges).T.to(torch.long)
+
+
+def add_loops(edge_index, num_nodes):
+    edges = [edge.tolist() for edge in edge_index.T]
+    for v in range(num_nodes):
+        edges.append((v, v))
+    return torch.Tensor(edges).T.to(torch.long)
+
+
 def seed_everything(seed):
     random.seed(seed)
     np.random.seed(seed)

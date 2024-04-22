@@ -9,7 +9,8 @@ dataset:
   task_type: regression
   transductive: False
   node_encoder: True
-  node_encoder_name: Atom+ARWPE+ARWSE
+  node_encoder_name: Atom
+  # node_encoder_name: Atom+ARWPE+ARWSE
   node_encoder_bn: False
   edge_encoder: True
   edge_encoder_name: Bond
@@ -32,18 +33,23 @@ prep:
 #   enable: True
 #   kernel:
 #     times: [1, 2, 3]
-posenc_ARWPE:
+posenc_ARRWPE:
   enable: True
-  model: linear
   dim_pe: 8
   window_size: 6
   scale: True
-posenc_ARWSE:
-  enable: True
-  model: linear
-  dim_pe: 8
-  window_size: 6
-  scale: True
+# posenc_ARWPE:
+#   enable: True
+#   model: linear
+#   dim_pe: 8
+#   window_size: 6
+#   scale: True
+# posenc_ARWSE:
+#   enable: True
+#   model: linear
+#   dim_pe: 8
+#   window_size: 6
+#   scale: True
 train:
   mode: custom
   batch_size: 4
