@@ -118,7 +118,7 @@ def compute_posenc_stats(data, pe_types, is_undirected, cfg):
         )
         data.node_arrwp = abs_enc
         data.edge_arrwp_index = rel_enc_idx
-        data.edge_arrwp_val = rel_enc_val
+        data.edge_arrwp_attr = rel_enc_val
 
     # Approximated Random Walk Positional Encoding.
     if 'ARWPE' in pe_types:

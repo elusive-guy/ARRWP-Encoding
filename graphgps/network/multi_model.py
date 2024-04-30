@@ -55,9 +55,17 @@ class FeatureEncoder(torch.nn.Module):
                     new_layer_config(cfg.gt.dim_edge, -1, -1, has_act=False,
                                     has_bias=False, cfg=cfg))
 
+        if 'Exphormer' in cfg.gt.layer_type:
+            self.exp_edge_fixer = ExpanderEdgeFixer(add_edge_index=cfg.prep.add_edge_index, 
+                                                    num_virt_node=cfg.prep.num_virt_node)
+
         if cfg.posenc_ARRWPE.enable:
+            window_size = cfg.posenc_ARRWPE.window_size
+            if window_size is None:
+                window_size = cfg.prep.random_walks.walk_length
+
             self.arrwp_abs_encoder = ARRWPLinearNodeEncoder(
-                cfg.posenc_ARRWPE.window_size,
+                window_size,
                 cfg.gt.dim_hidden,
             )
 
@@ -65,13 +73,9 @@ class FeatureEncoder(torch.nn.Module):
                 cfg.gt.dim_edge = cfg.gt.dim_hidden
             
             self.arrwp_rel_encoder = ARRWPLinearEdgeEncoder(
-                cfg.posenc_ARRWPE.window_size,
+                window_size,
                 cfg.gt.dim_edge,
             )
-
-        if 'Exphormer' in cfg.gt.layer_type:
-            self.exp_edge_fixer = ExpanderEdgeFixer(add_edge_index=cfg.prep.add_edge_index, 
-                                                    num_virt_node=cfg.prep.num_virt_node)
 
     def forward(self, batch):
         for module in self.children():

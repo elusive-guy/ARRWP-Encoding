@@ -15,7 +15,7 @@ from graphgps.transform.approx_rw_utils\
 
 @torch.no_grad()
 def calculate_arrwpe_stats(
-    walks, num_nodes, window_size,
+    walks, num_nodes, window_size=None,
     scale=True, edge_index=None,
 ):
     """
@@ -29,6 +29,7 @@ def calculate_arrwpe_stats(
         window_size: int
             The size of the window for more effective
             walks using.
+            If None, the walk length is used.
         scale: bool
             IF True, probabilities will be computed.
             If False, hits will be computed.
@@ -46,6 +47,9 @@ def calculate_arrwpe_stats(
         rel_enc_val: torch.Tensor
             Relative encoding values.
     """
+
+    if window_size is None:
+        window_size = walks.shape[1]
 
     arrwp = calculate_arrwp_matrix(
         walks, num_nodes, window_size, 
@@ -71,7 +75,7 @@ def calculate_arrwpe_stats(
 
 @torch.no_grad()
 def calculate_arrwp_matrix(
-    walks, num_nodes, window_size, 
+    walks, num_nodes, window_size=None, 
     scale=True, edge_index=None,
 ):
     """
@@ -86,6 +90,7 @@ def calculate_arrwp_matrix(
         window_size: int
             The size of the window for more effective
             walks using.
+            If None, the walk length is used.
         scale: bool
             IF True, probabilities will be computed.
             If False, hits will be computed.
@@ -98,6 +103,9 @@ def calculate_arrwp_matrix(
         The ARRWP matrix of size (num_nodes, num_nodes,
         window_size) as sparse COO tensor.
     """
+
+    if window_size is None:
+        window_size = walks.shape[1]
 
     idx, values = calculate_arrwp_matrix_(
         walks, num_nodes, window_size, 
@@ -112,7 +120,7 @@ def calculate_arrwp_matrix(
 
 @torch.no_grad()
 def calculate_arwpe_matrix(
-    walks, num_nodes, window_size, scale=True,
+    walks, num_nodes, window_size=None, scale=True,
 ):
     """
     Calculates the ARWPE matrix.
@@ -124,6 +132,7 @@ def calculate_arwpe_matrix(
             The number of nodes in the graph.
         window_size: int
             The size of the window for more effective walks using.
+            If None, the walk length is used.
         scale: bool
             IF True, probabilities will be computed.
             If False, hits will be computed.
@@ -131,6 +140,9 @@ def calculate_arwpe_matrix(
     Returns:
         The ARWPE matrix of size (num_nodes, window_size).
     """
+
+    if window_size is None:
+        window_size = walks.shape[1]
 
     arwpe = calculate_arwpe_matrix_(
         walks, num_nodes, window_size, scale=scale,
@@ -140,7 +152,7 @@ def calculate_arwpe_matrix(
 
 @torch.no_grad()
 def calculate_arwse_matrix(
-    walks, num_nodes, window_size, scale=True,
+    walks, num_nodes, window_size=None, scale=True,
 ):
     """
     Calculates the ARWSE matrix.
@@ -152,6 +164,7 @@ def calculate_arwse_matrix(
             The number of nodes in the graph.
         window_size: int
             The size of the window for more effective walks using.
+            If None, the walk length is used.
         scale: bool
             IF True, probabilities will be computed.
             If False, hits will be computed.
@@ -159,6 +172,9 @@ def calculate_arwse_matrix(
     Returns:
         The ARWSE matrix of size (num_nodes, window_size).
     """
+
+    if window_size is None:
+        window_size = walks.shape[1]
     
     arwse = calculate_arwse_matrix_(
         walks, num_nodes, window_size, scale=scale,

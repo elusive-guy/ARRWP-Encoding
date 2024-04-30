@@ -111,6 +111,7 @@ class CustomLogger(Logger):
             # TorchMetrics AUROC on GPU is much faster than sklearn for large ds
             res['auc'] = reformat(auroc(pred_score.to(torch.device(cfg.device)),
                                         true.to(torch.device(cfg.device)).squeeze(),
+                                        "multiclass",
                                         num_classes=pred_score.shape[1],
                                         average='macro'))
 

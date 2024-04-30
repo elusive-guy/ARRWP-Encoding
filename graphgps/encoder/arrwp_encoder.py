@@ -39,7 +39,7 @@ class ARRWPLinearNodeEncoder(nn.Module):
             batch.x = arrwp
 
         if self.norm:
-            arrwp = self.norm(arrwp)
+            batch.x = self.norm(batch.x)
 
         return batch
     
@@ -74,20 +74,20 @@ class ARRWPLinearEdgeEncoder(torch.nn.Module):
 
     def forward(self, batch):
         arrwp_index = batch[f"edge_{self.mx_name}_index"]
-        arrwp_val = batch[f"edge_{self.mx_name}_val"]
+        arrwp_attr = batch[f"edge_{self.mx_name}_attr"]
         edge_index = batch.edge_index
         edge_attr = batch.edge_attr
         
-        arrwp_val = self.fc(arrwp_val)
+        arrwp_attr = self.fc(arrwp_attr)
 
         if edge_attr is None:
             edge_attr = edge_index.new_zeros(
-                edge_index.size(1), arrwp_val.size(1),
+                edge_index.size(1), arrwp_attr.size(1),
             )
 
         upd_edge_index, upd_edge_attr = coalesce(
             torch.cat([edge_index, arrwp_index], dim=1),
-            torch.cat([edge_attr, arrwp_val], dim=0),
+            torch.cat([edge_attr, arrwp_attr], dim=0),
             reduce="add",
         )
 

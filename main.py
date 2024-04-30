@@ -128,7 +128,7 @@ if __name__ == '__main__':
         cfg.seed = seed
         cfg.run_id = run_id
         seed_everything(cfg.seed)
-        auto_select_device()
+        auto_select_device(strategy='greedy')
         if cfg.pretrained.dir:
             cfg = load_pretrained_model_cfg(cfg)
         logging.info(f"[*] Run ID {run_id}: seed={cfg.seed}, "
