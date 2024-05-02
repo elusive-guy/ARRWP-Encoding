@@ -73,27 +73,40 @@ class ARRWPLinearEdgeEncoder(torch.nn.Module):
             self.norm = None
 
     def forward(self, batch):
-        arrwp_index = batch[f"edge_{self.mx_name}_index"]
-        arrwp_attr = batch[f"edge_{self.mx_name}_attr"]
-        edge_index = batch.edge_index
-        edge_attr = batch.edge_attr
-        
-        arrwp_attr = self.fc(arrwp_attr)
-
-        if edge_attr is None:
-            edge_attr = edge_index.new_zeros(
-                edge_index.size(1), arrwp_attr.size(1),
+        if batch.edge_attr is None:
+            batch.edge_attr = batch.edge_index.new_zeros(
+                batch.edge_index.size(1), batch.arrwp_attr.size(1),
             )
 
-        upd_edge_index, upd_edge_attr = coalesce(
-            torch.cat([edge_index, arrwp_index], dim=1),
-            torch.cat([edge_attr, arrwp_attr], dim=0),
-            reduce="add",
+        # for troubles with PyG 2.0.4 fixing
+        batch.edge_index = torch.cat(
+            (batch.edge_index, batch.edge_attr.T)
         )
 
-        if self.norm:
-            upd_edge_attr = self.norm(upd_edge_attr)
+        data_list = batch.to_data_list()
+        for data in data_list:
+            arrwp_index = data[f"edge_{self.mx_name}_index"]
+            arrwp_attr = data[f"edge_{self.mx_name}_attr"]
+            arrwp_attr = self.fc(arrwp_attr)
 
-        batch.edge_index, batch.edge_attr =\
-            upd_edge_index, upd_edge_attr
-        return batch
+            edge_index = data.edge_index[:2].long()
+            edge_attr = data.edge_index[2:].T
+
+            upd_edge_index, upd_edge_attr = coalesce(
+                torch.cat([edge_index, arrwp_index], dim=1),
+                torch.cat([edge_attr, arrwp_attr], dim=0),
+                reduce="add",
+            )
+
+            if self.norm:
+                upd_edge_attr = self.norm(upd_edge_attr)
+
+            data.edge_index, data.edge_attr =\
+                upd_edge_index, upd_edge_attr
+
+        upd_batch = batch.from_data_list(data_list)
+        for key in batch.keys:
+            if key not in upd_batch:
+                upd_batch[key] = batch[key]
+
+        return upd_batch
