@@ -109,10 +109,13 @@ def compute_posenc_stats(data, pe_types, is_undirected, cfg):
     if 'ARRWPE' in pe_types:
         if not hasattr(data, 'random_walks'):
             raise ValueError('random walks not stored in data')
+        window_size = cfg.posenc_ARRWPE.window_size
+        if window_size is None or window_size == 'none':
+            window_size = cfg.prep.random_walks.walk_length
         abs_enc, rel_enc_idx, rel_enc_val = calculate_arrwpe_stats(
             walks=data.random_walks,
             num_nodes=data.num_nodes,
-            window_size=cfg.posenc_ARRWPE.window_size,
+            window_size=window_size,
             scale=cfg.posenc_ARRWPE.scale,
             edge_index=data.edge_index,
         )
@@ -124,10 +127,13 @@ def compute_posenc_stats(data, pe_types, is_undirected, cfg):
     if 'ARWPE' in pe_types:
         if not hasattr(data, 'random_walks'):
             raise ValueError('random walks not stored in data')
+        window_size = cfg.posenc_ARWPE.window_size
+        if window_size is None or window_size == 'none':
+            window_size = cfg.prep.random_walks.walk_length
         arwpe = calculate_arwpe_matrix(
             walks=data.random_walks,
             num_nodes=data.num_nodes,
-            window_size=cfg.posenc_ARWPE.window_size,
+            window_size=window_size,
             scale=cfg.posenc_ARWPE.scale,
         )
         data.pestat_ARWPE = arwpe
@@ -136,10 +142,13 @@ def compute_posenc_stats(data, pe_types, is_undirected, cfg):
     if 'ARWSE' in pe_types:
         if not hasattr(data, 'random_walks'):
             raise ValueError('random walks not stored in data')
+        window_size = cfg.posenc_ARWSE.window_size
+        if window_size is None or window_size == 'none':
+            window_size = cfg.prep.random_walks.walk_length
         arwse = calculate_arwse_matrix(
             walks=data.random_walks,
             num_nodes=data.num_nodes,
-            window_size=cfg.posenc_ARWSE.window_size,
+            window_size=window_size,
             scale=cfg.posenc_ARWSE.scale,
         )
         data.pestat_ARWSE = arwse

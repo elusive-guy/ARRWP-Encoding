@@ -57,12 +57,13 @@ class FeatureEncoder(torch.nn.Module):
 
         if cfg.posenc_ARRWPE.enable:
             window_size = cfg.posenc_ARRWPE.window_size
-            if window_size is None:
+            if window_size is None or window_size == 'none':
                 window_size = cfg.prep.random_walks.walk_length
 
             self.arrwp_abs_encoder = ARRWPLinearNodeEncoder(
                 window_size,
                 cfg.gt.dim_hidden,
+                norm_type=cfg.posenc_ARRWPE.raw_norm_type,
             )
 
             if not hasattr(cfg.gt, 'dim_edge') or cfg.gt.dim_edge is None:
@@ -71,6 +72,7 @@ class FeatureEncoder(torch.nn.Module):
             self.arrwp_rel_encoder = ARRWPLinearEdgeEncoder(
                 window_size,
                 cfg.gt.dim_edge,
+                norm_type=cfg.posenc_ARRWPE.raw_norm_type,
             )
 
         if 'Exphormer' in cfg.gt.layer_type:
