@@ -11,6 +11,7 @@ def set_cfg_posenc(cfg):
     cfg.posenc_LapPE = CN()
     cfg.posenc_SignNet = CN()
     cfg.posenc_RWSE = CN()
+    cfg.posenc_RRWPE = CN()
     cfg.posenc_ARRWPE = CN()
     cfg.posenc_ARWPE = CN()
     cfg.posenc_ARWSE = CN()
@@ -24,7 +25,7 @@ def set_cfg_posenc(cfg):
 
     # Common arguments to all PE types.
     for name in ['posenc_LapPE', 'posenc_SignNet',
-                 'posenc_RWSE', 'posenc_ARRWPE', 'posenc_ARWPE',
+                 'posenc_RWSE', 'posenc_RRWPE', 'posenc_ARRWPE', 'posenc_ARWPE',
                  'posenc_ARWSE', 'posenc_HKdiagSE', 'posenc_ElstaticSE',
                  'posenc_ERN', 'posenc_ERE']:
         pecfg = getattr(cfg, name)
@@ -98,6 +99,13 @@ def set_cfg_posenc(cfg):
 
         pecfg.window_size = None
         pecfg.scale = True
+
+    # Additional arguments for RRWPE.
+    cfg.posenc_RRWPE.enable = False
+    cfg.posenc_RRWPE.full_graph = True
+    cfg.posenc_RRWPE.ksteps = 21
+    cfg.posenc_RRWPE.add_identity = True
+    cfg.posenc_RRWPE.spd = False
 
     # Override default, electrostatic kernel has fixed set of 10 measures.
     cfg.posenc_ElstaticSE.kernel.times_func = 'range(10)'

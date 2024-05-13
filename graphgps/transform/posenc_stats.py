@@ -9,6 +9,9 @@ from torch_geometric.utils import (get_laplacian, to_scipy_sparse_matrix,
 from torch_geometric.utils.num_nodes import maybe_num_nodes
 from torch_scatter import scatter_add
 
+from functools import partial
+from .rrwp import add_rrwp
+
 from graphgps.transform.approx_rw_transforms import (calculate_arrwpe_stats,
                                                      calculate_arwpe_matrix,
                                                      calculate_arwse_matrix)
@@ -20,6 +23,7 @@ def compute_posenc_stats(data, pe_types, is_undirected, cfg):
     Supported PE statistics to precompute, selected by `pe_types`:
     'LapPE': Laplacian eigen-decomposition.
     'RWSE': Random walk landing probabilities (diagonals of RW matrices).
+    'RRWPE': Relative Random Walk Probabilities PE (PE from GRIT)
     'ARRWPE': Approximated Relative Random Walks Probabilities Encoding
     'ARWPE': Approximated Random Walk Positional Encoding (columns sum of ARW
         matrices except diagonals)
@@ -40,7 +44,7 @@ def compute_posenc_stats(data, pe_types, is_undirected, cfg):
     """
     # Verify PE types.
     for t in pe_types:
-        if t not in ['LapPE', 'EquivStableLapPE', 'SignNet', 'RWSE',
+        if t not in ['LapPE', 'EquivStableLapPE', 'SignNet', 'RWSE', 'RRWPE',
                      'ARRWPE', 'ARWPE', 'ARWSE', 'HKdiagSE', 'HKfullPE',
                      'ElstaticSE', 'ERN']:
             raise ValueError(f"Unexpected PE stats selection {t} in {pe_types}")
@@ -104,6 +108,19 @@ def compute_posenc_stats(data, pe_types, is_undirected, cfg):
                                           edge_index=data.edge_index,
                                           num_nodes=N)
         data.pestat_RWSE = rw_landing
+
+    # Relative Random Walks Probabilities Encoding.
+    if 'RRWPE' in pe_types:
+        param = cfg.posenc_RRWPE
+        transform = partial(add_rrwp,
+                            walk_length=param.ksteps,
+                            attr_name_abs="rrwp",
+                            attr_name_rel="rrwp",
+                            full_graph=param.full_graph,
+                            add_identity=True,
+                            spd=param.spd, # by default False
+                            )
+        data = transform(data)
 
     # Approximated Relative Random Walks Probabilities Encoding.
     if 'ARRWPE' in pe_types:

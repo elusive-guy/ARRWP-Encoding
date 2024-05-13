@@ -54,6 +54,20 @@ class FeatureEncoder(torch.nn.Module):
                 self.edge_encoder_bn = BatchNorm1dNode(
                     new_layer_config(cfg.gt.dim_edge, -1, -1, has_act=False,
                                     has_bias=False, cfg=cfg))
+                
+        if cfg.posenc_RRWPE.enable:
+            if not hasattr(cfg.gt, 'dim_edge') or cfg.gt.dim_edge is None:
+                cfg.gt.dim_edge = cfg.gt.dim_hidden
+
+            self.rrwp_abs_encoder = register.node_encoder_dict["rrwp_linear"]\
+                (cfg.posenc_RRWPE.ksteps, cfg.gnn.dim_inner)
+            rel_pe_dim = cfg.posenc_RRWPE.ksteps
+            self.rrwp_rel_encoder = register.edge_encoder_dict["rrwp_linear"] \
+                (rel_pe_dim, cfg.gt.dim_edge,
+                 pad_to_full_graph=cfg.posenc_RRWPE.full_graph,
+                 add_node_attr_as_self_loop=False,
+                 fill_value=0.
+                 )
 
         if cfg.posenc_ARRWPE.enable:
             window_size = cfg.posenc_ARRWPE.window_size
