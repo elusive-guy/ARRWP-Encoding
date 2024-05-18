@@ -16,6 +16,8 @@ from torch_geometric.graphgym.config import cfg
 from torch_geometric.graphgym.loader import load_pyg, load_ogb, set_dataset_attr
 from torch_geometric.graphgym.register import register_loader
 
+from torch_geometric.utils import coalesce
+
 from graphgps.loader.planetoid import Planetoid
 from graphgps.loader.dataset.aqsol_molecules import AQSOL
 from graphgps.loader.dataset.coco_superpixels import COCOSuperpixels
@@ -219,6 +221,35 @@ def load_dataset_master(format, name, dataset_dir):
         ]
     print("debug mode:", cfg.debug)
 
+    # coalesce repeating edges
+    if cfg.prep.coalesce_edges:
+        def coalesce_edges(data):
+            edge_index = data.edge_index
+            edge_attr = data.edge_attr
+
+            if edge_attr is None:
+                upd_edge_index = coalesce(
+                    edge_index,
+                    reduce="add",
+                    sort_by_row=False,
+                )
+                upd_edge_attr = None
+
+            else:
+                upd_edge_index, upd_edge_attr = coalesce(
+                    edge_index, edge_attr,
+                    reduce="add",
+                    sort_by_row=False,
+                )
+
+            data.edge_index, data.edge_attr =\
+                upd_edge_index, upd_edge_attr
+
+            return data
+        
+        print("Coalesce repeating edges:")
+        pre_transform_in_memory(dataset, coalesce_edges, show_progress=True)
+
     # adding random walks
     if cfg.prep.random_walks.enable:
         start = time.perf_counter()
@@ -348,9 +379,17 @@ def load_dataset_master(format, name, dataset_dir):
         logging.info(f"Done! Took {timestr}")
 
 
+    # def zero_data(data):
+    #     data.x = torch.zeros_like(data.x)
+    #     # data.edge_attr = torch.zeros_like(data.edge_attr)
+    #     return data
+
+    # pre_transform_in_memory(dataset, zero_data)
+
+
     # This could not be done earlier because the training wants 'train_mask' etc.
     # Now after using gnn.head: inductive_node this is ok.
-    if name == 'ogbn-arxiv' or name == 'ogbn-proteins':
+    if name == 'ogbn-arxiv' or name == 'ogbn-proteins' or name == 'ogbn-products':
       return dataset
     # Set standard dataset train/val/test splits
     if hasattr(dataset, 'split_idxs'):
@@ -642,12 +681,12 @@ def preformat_TUDataset(dataset_dir, name):
     elif name.startswith('IMDB-') or name == "COLLAB":
         func = T.Constant()
     else:
-        ValueError(f"Loading dataset '{name}' from TUDataset is not supported.")
+        raise ValueError(f"Loading dataset '{name}' from TUDataset is not supported.")
     dataset = TUDataset(dataset_dir, name, pre_transform=func)
     return dataset
 
 def preformat_ogbn(dataset_dir, name):
-  if name == 'ogbn-arxiv' or name == 'ogbn-proteins':
+  if name == 'ogbn-arxiv' or name == 'ogbn-proteins' or name == 'ogbn-products':
     dataset = PygNodePropPredDataset(name=name)
     if name == 'ogbn-arxiv':
       pre_transform_in_memory(dataset, partial(add_reverse_edges))
@@ -675,7 +714,7 @@ def preformat_ogbn(dataset_dir, name):
 
      # return dataset
   else:
-     ValueError(f"Unknown ogbn dataset '{name}'.")
+     raise ValueError(f"Unknown ogbn dataset '{name}'.")
 
 def preformat_ZINC(dataset_dir, name):
     """Load and preformat ZINC datasets.

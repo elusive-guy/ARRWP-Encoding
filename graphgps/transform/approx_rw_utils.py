@@ -106,7 +106,7 @@ def count_walks(walks, num_nodes, window_size, replace_zeros=False):
 
 
 @jit(nopython=True)
-def get_relations(walks, window_size):
+def get_relations_for_stats(walks, window_size):
     """
     Collects unique pairs of nodes which have at least one
     walk between them.
@@ -138,7 +138,40 @@ def get_relations(walks, window_size):
 
 
 @jit(nopython=True)
-def add_self_relations(relations, num_nodes):
+def get_relations(walks, window_size):
+    """
+    Collects unique pairs of nodes which have at least one
+    walk between them. Distances between nodes are also
+    tracked.
+
+    Args:
+        walks: np.ndarray
+            2D array with walks in a graph.
+        window_size: int
+            The size of the window for more effective
+            walks using.
+
+    Returns:
+        An array of size (3, relation_count) with unique
+        node pairs and distances between them.
+    """
+
+    num_walks = walks.shape[0]
+    num_steps = walks.shape[1] - window_size + 1
+
+    relations = set()
+    for walk_id, step in np.ndindex(num_walks, num_steps):
+        for depth in range(window_size):
+            src = walks[walk_id, step]
+            dst = walks[walk_id, step + depth]
+            relations.add((src, dst, depth))
+    relations = list(relations)
+
+    return np.array(relations, dtype=np.int64).T
+
+
+@jit(nopython=True)
+def add_self_relations_for_stats(relations, num_nodes):
     """
     Adds a relation with itself for each node.
     
@@ -162,13 +195,68 @@ def add_self_relations(relations, num_nodes):
 
     upd_relations = list(upd_relations)
     return np.array(upd_relations).T
+
+
+@jit(nopython=True)
+def add_self_relations(relations, num_nodes, window_size):
+    """
+    Adds a relation with itself for each node.
+    Each relation is duplicated window_size times
+    for each depth.
     
+    Args:
+        relations: np.ndarray
+            2D array with relations between nodes.
+        num_nodes: int
+            The number of nodes in the graph.
+        window_size: int
+            The size of the window for more effective
+            walks using.
+
+    Returns:
+        Updated relations of size (3, new_relation_count)
+        with unique node pairs and distances between them.
+    """
+
+    upd_relations = set()
+    for src, dst in relations.T:
+        for depth in range(window_size):
+            upd_relations.add((src, dst, depth))
+    
+    for v in range(num_nodes):
+        for depth in range(window_size):
+            upd_relations.add((v, v, depth))
+
+    upd_relations = list(upd_relations)
+    return np.array(upd_relations).T
+
+
+@jit(nopython=True)
+def get_unique_edges(edge_index):
+    edges = set()
+    for src, dst in edge_index.T:
+        edges.add((src, dst))
+    edge_index_ = list(edges)
+    return np.array(edge_index_, dtype=np.int64).T
+
+
+@jit(nopython=True)
+def get_edge_idx(edge_ids, edge, num_edges, num_nodes):
+    edge_id = edge_to_id(edge, num_nodes)
+    idx = np.searchsorted(edge_ids, edge_id)
+    is_edge = idx < num_edges and edge_ids[idx] == edge_id
+    return idx*is_edge + num_edges*(1 - is_edge)
+
 
 @jit(nopython=True)
 def edge_to_id(edge, num_nodes):
-    return edge[0]*num_nodes + edge[1]
+    return edge[0]*num_nodes + edge[1]\
+           + edge[-1]*num_nodes*num_nodes*(len(edge) == 3)
 
 
 @jit(nopython=True)
-def id_to_edge(edge_id, num_nodes): 
-    return edge_id // num_nodes, edge_id % num_nodes
+def id_to_edge(edge_id, num_nodes):
+    depth = edge_id // (num_nodes * num_nodes)
+    edge_id_ = edge_id - depth*num_nodes*num_nodes
+    src, dst = edge_id_ // num_nodes, edge_id_ % num_nodes
+    return src, dst, depth

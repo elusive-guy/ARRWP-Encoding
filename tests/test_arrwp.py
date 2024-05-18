@@ -8,7 +8,9 @@ from gt_funcs import gt_count_walks
 from graphgps.transform.approx_rw_utils import (remove_extra_loops,
                                                 check_loops,
                                                 count_walks,
+                                                get_relations_for_stats,
                                                 get_relations,
+                                                add_self_relations_for_stats,
                                                 add_self_relations)
 
 from gt_funcs import (gt_calculate_arrwp_matrix,
@@ -16,6 +18,7 @@ from gt_funcs import (gt_calculate_arrwp_matrix,
                       gt_calculate_arwpe_matrix)
 from graphgps.transform.approx_rw_transforms\
     import (calculate_arrwpe_stats,
+            calculate_arrwp_matrix_for_stats,
             calculate_arrwp_matrix,
             calculate_arwse_matrix,
             calculate_arwpe_matrix)
@@ -151,7 +154,7 @@ class TestLoopsFuncs:
 
 
 class TestRelationsFuncs:
-    def test_get_relations_1(self):
+    def test_get_relations_for_stats_1(self):
         walks = np.array([
             [0, 1, 2, 3, 4],
             [2, 1, 0, 0, 4],
@@ -162,6 +165,67 @@ class TestRelationsFuncs:
         gt_relations = np.array([
             [0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 4, 4],
             [0, 1, 4, 1, 0, 2, 1, 2, 3, 3, 4, 3, 4],
+        ])
+        relations = get_relations_for_stats(walks, window_size)
+
+        gt_st = set(tuple(rel) for rel in gt_relations.T)
+        st = set(tuple(rel) for rel in relations.T)
+
+        assert gt_relations.shape == relations.shape\
+                        and gt_st == st
+
+    def test_get_relations_for_stats_2(self):
+        walks = np.array([
+            [0, 1, 2, 3, 4],
+            [2, 1, 0, 0, 4],
+            [4, 4, 4, 4, 3],
+        ])
+        window_size = 3
+
+        gt_relations = np.array([
+            [0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 2, 4, 4],
+            [0, 1, 2, 4, 0, 1, 2, 3, 0, 1, 2, 3, 4, 3, 4],
+        ])
+        relations = get_relations_for_stats(walks, window_size)
+
+        gt_st = set(tuple(rel) for rel in gt_relations.T)
+        st = set(tuple(rel) for rel in relations.T)
+
+        assert gt_relations.shape == relations.shape\
+                        and gt_st == st
+    
+    def test_get_relations_for_stats_3(self):
+        walks = np.array([
+            [0, 1, 2, 3, 4],
+            [2, 1, 0, 0, 4],
+            [4, 4, 4, 4, 3],
+        ])
+        window_size = 5
+
+        gt_relations = np.array([
+            [0, 0, 0, 0, 0, 2, 2, 2, 2, 4, 4],
+            [0, 1, 2, 3, 4, 0, 1, 2, 4, 3, 4],
+        ])
+        relations = get_relations_for_stats(walks, window_size)
+
+        gt_st = set(tuple(rel) for rel in gt_relations.T)
+        st = set(tuple(rel) for rel in relations.T)
+
+        assert gt_relations.shape == relations.shape\
+                        and gt_st == st
+        
+    def test_get_relations_1(self):
+        walks = np.array([
+            [0, 1, 2, 3, 4],
+            [2, 1, 0, 0, 4],
+            [4, 4, 4, 4, 3],
+        ])
+        window_size = 2
+
+        gt_relations = np.array([
+            [0, 0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 4, 4, 4],
+            [0, 0, 1, 4, 1, 0, 2, 1, 2, 3, 3, 4, 3, 4, 4],
+            [0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 0, 1, 1, 0, 1],
         ])
         relations = get_relations(walks, window_size)
 
@@ -180,8 +244,12 @@ class TestRelationsFuncs:
         window_size = 3
 
         gt_relations = np.array([
-            [0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 2, 4, 4],
-            [0, 1, 2, 4, 0, 1, 2, 3, 0, 1, 2, 3, 4, 3, 4],
+            [0, 0, 0, 0, 0, 1, 1, 1, 1, 1,
+             2, 2, 2, 2, 2, 4, 4, 4, 4],
+            [0, 0, 1, 2, 4, 0, 0, 1, 2, 3,
+             0, 1, 2, 3, 4, 3, 4, 4, 4],
+            [0, 1, 1, 2, 2, 1, 2, 0, 1, 2,
+             2, 1, 0, 1, 2, 2, 0, 1, 2],
         ])
         relations = get_relations(walks, window_size)
 
@@ -200,8 +268,12 @@ class TestRelationsFuncs:
         window_size = 5
 
         gt_relations = np.array([
-            [0, 0, 0, 0, 0, 2, 2, 2, 2, 4, 4],
-            [0, 1, 2, 3, 4, 0, 1, 2, 4, 3, 4],
+            [0, 0, 0, 0, 0, 2, 2, 2,
+             2, 2, 4, 4, 4, 4, 4],
+            [0, 1, 2, 3, 4, 0, 0, 1,
+             2, 4, 3, 4, 4, 4, 4],
+            [0, 1, 2, 3, 4, 2, 3, 1,
+             0, 4, 4, 0, 1, 2, 3],
         ])
         relations = get_relations(walks, window_size)
 
@@ -210,8 +282,8 @@ class TestRelationsFuncs:
 
         assert gt_relations.shape == relations.shape\
                         and gt_st == st
-        
-    def test_add_self_relations(self):
+    
+    def test_add_self_relations_for_stats(self):
         relations = np.array([
             [0, 0, 0, 0, 0, 2, 2, 2, 2, 4, 4],
             [0, 1, 2, 3, 4, 0, 1, 2, 4, 3, 4],
@@ -222,7 +294,39 @@ class TestRelationsFuncs:
             [0, 0, 0, 0, 0, 1, 2, 2, 2, 2, 3, 4, 4],
             [0, 1, 2, 3, 4, 1, 0, 1, 2, 4, 3, 3, 4],
         ])
-        new_relations = add_self_relations(relations, num_nodes)
+        new_relations = add_self_relations_for_stats(relations, num_nodes)
+
+        gt_st = set(tuple(rel) for rel in gt_new_relations.T)
+        st = set(tuple(rel) for rel in new_relations.T)
+
+        assert gt_new_relations.shape == new_relations.shape\
+                            and gt_st == st
+        
+    def test_add_self_relations(self):
+        relations = np.array([
+            [0, 0, 0, 0, 0, 2, 2, 2, 2, 4, 4],
+            [0, 1, 2, 3, 4, 0, 1, 2, 4, 3, 4],
+        ])
+        num_nodes = 5
+
+        window_size = 4
+
+        gt_new_relations_ = np.array([
+            [0, 0, 0, 0, 0, 1, 2, 2, 2, 2, 3, 4, 4],
+            [0, 1, 2, 3, 4, 1, 0, 1, 2, 4, 3, 3, 4],
+        ])
+        num_un_relations = gt_new_relations_.shape[1]
+        gt_new_relations = np.empty(
+            (3, num_un_relations*window_size),
+        )
+        for i in range(num_un_relations):
+            for depth in range(window_size):
+                gt_new_relations.T[num_un_relations*depth + i] =\
+                    tuple((*gt_new_relations_.T[i], depth))
+
+        new_relations = add_self_relations(
+            relations, num_nodes, window_size,
+        )
 
         gt_st = set(tuple(rel) for rel in gt_new_relations.T)
         st = set(tuple(rel) for rel in new_relations.T)
@@ -275,6 +379,59 @@ class TestARRWPEncoding:
 
                 assert np.allclose(gt_mx, mx.to_dense(), rtol=1e-4)
 
+    def test_arrwp_for_stats_small(self):
+        walks, num_nodes = read_test_walks()
+        
+        walk_length = walks.shape[1]
+        window_size_lst = [10, walk_length]
+        scales = [False, True]
+
+        num_edges = int(num_nodes*num_nodes*0.8)
+        edge_index = torch.randint(0, num_nodes, (2, num_edges))
+
+        for window_size in window_size_lst:
+            for scale in scales:
+                gt_mx = gt_calculate_arrwp_matrix(
+                    walks, num_nodes, window_size, scale=scale,
+                    edge_index=edge_index, self_loops=True,
+                )
+                mx = calculate_arrwp_matrix_for_stats(
+                    walks, num_nodes, window_size, scale=scale,
+                    edge_index=edge_index.cpu().detach().numpy(),
+                )
+
+                assert np.allclose(gt_mx, mx.to_dense())
+
+    def test_arrwp_for_stats_medium(self):
+        seed_everything(42)
+        
+        num_nodes = 100
+        num_walks = 100
+        walk_length = 60
+
+        many_walks = generate_walks(
+            num_nodes, num_walks, walk_length,
+        )
+
+        window_size_lst = [40, walk_length]
+        scales = [False, True]
+
+        num_edges = int(num_nodes*num_nodes*0.8)
+        edge_index = torch.randint(0, num_nodes, (2, num_edges))
+
+        for window_size in window_size_lst:
+            for scale in scales:
+                gt_mx = gt_calculate_arrwp_matrix(
+                    many_walks, num_nodes, window_size, scale=scale,
+                    edge_index=edge_index, self_loops=True,
+                )
+                mx = calculate_arrwp_matrix_for_stats(
+                    many_walks, num_nodes, window_size, scale=scale,
+                    edge_index=edge_index.cpu().detach().numpy(),
+                )
+
+                assert np.allclose(gt_mx, mx.to_dense(), rtol=1e-4)
+
     def test_arrwpe_tiny(self):
         walks = np.array([
             [0, 1, 1, 3],
@@ -311,9 +468,6 @@ class TestARRWPEncoding:
                 rel_enc = torch.sparse_coo_tensor(
                     rel_enc_idx, rel_enc_val, size,
                 )
-
-                print(gt_arrwp)
-                print(rel_enc.to_dense())
 
                 assert np.allclose(gt_arwse, abs_enc)
                 assert np.allclose(gt_arrwp, rel_enc.to_dense())

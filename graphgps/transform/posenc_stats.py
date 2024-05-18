@@ -13,6 +13,7 @@ from functools import partial
 from .rrwp import add_rrwp
 
 from graphgps.transform.approx_rw_transforms import (calculate_arrwpe_stats,
+                                                     calculate_arrwpe_proj_stats,
                                                      calculate_arwpe_matrix,
                                                      calculate_arwse_matrix)
 
@@ -44,7 +45,7 @@ def compute_posenc_stats(data, pe_types, is_undirected, cfg):
     """
     # Verify PE types.
     for t in pe_types:
-        if t not in ['LapPE', 'EquivStableLapPE', 'SignNet', 'RWSE', 'RRWPE',
+        if t not in ['LapPE', 'EquivStableLapPE', 'SignNet', 'RWSE', 'RWPE', 'RRWPE',
                      'ARRWPE', 'ARWPE', 'ARWSE', 'HKdiagSE', 'HKfullPE',
                      'ElstaticSE', 'ERN']:
             raise ValueError(f"Unexpected PE stats selection {t} in {pe_types}")
@@ -99,7 +100,7 @@ def compute_posenc_stats(data, pe_types, is_undirected, cfg):
             max_freqs=cfg.posenc_SignNet.eigen.max_freqs,
             eigvec_norm=cfg.posenc_SignNet.eigen.eigvec_norm)
 
-    # Random Walks.
+    # Random Walks Structural Encoding.
     if 'RWSE' in pe_types:
         kernel_param = cfg.posenc_RWSE.kernel
         if len(kernel_param.times) == 0:
@@ -108,6 +109,18 @@ def compute_posenc_stats(data, pe_types, is_undirected, cfg):
                                           edge_index=data.edge_index,
                                           num_nodes=N)
         data.pestat_RWSE = rw_landing
+        data.node_rwse = rw_landing
+
+    # Random Walks Positional Encoding.
+    if 'RWPE' in pe_types:
+        kernel_param = cfg.posenc_RWPE.kernel
+        if len(kernel_param.times) == 0:
+            raise ValueError("List of kernel times required for RWPE")
+        rwpe = get_rwpe_matrix(ksteps=kernel_param.times,
+                               edge_index=data.edge_index,
+                               num_nodes=N)
+        data.pestat_RWPE = rwpe
+        data.node_rwpe = rwpe
 
     # Relative Random Walks Probabilities Encoding.
     if 'RRWPE' in pe_types:
@@ -129,16 +142,32 @@ def compute_posenc_stats(data, pe_types, is_undirected, cfg):
         window_size = cfg.posenc_ARRWPE.window_size
         if window_size is None or window_size == 'none':
             window_size = cfg.prep.random_walks.walk_length
-        abs_enc, rel_enc_idx, rel_enc_val = calculate_arrwpe_stats(
-            walks=data.random_walks,
-            num_nodes=data.num_nodes,
-            window_size=window_size,
-            scale=cfg.posenc_ARRWPE.scale,
-            edge_index=data.edge_index,
-        )
-        data.node_arrwp = abs_enc
-        data.edge_arrwp_index = rel_enc_idx
-        data.edge_arrwp_attr = rel_enc_val
+
+        if cfg.posenc_ARRWPE.dim_reduction is None:
+            abs_enc, rel_enc_idx, rel_enc_val = calculate_arrwpe_stats(
+                walks=data.random_walks,
+                num_nodes=data.num_nodes,
+                window_size=window_size,
+                scale=cfg.posenc_ARRWPE.scale,
+                edge_index=data.edge_index,
+            )
+            data.node_arrwp = abs_enc
+            data.edge_arrwp_index = rel_enc_idx
+            data.edge_arrwp_attr = rel_enc_val
+
+        else:
+            data.node_arrwp_reduced = calculate_arrwpe_proj_stats(
+                walks=data.random_walks,
+                num_nodes=data.num_nodes,
+                dim_reduction=cfg.posenc_ARRWPE.dim_reduction,
+                dim_reduced=cfg.posenc_ARRWPE.dim_reduced,
+                window_size=window_size,
+                scale=cfg.posenc_ARRWPE.scale,
+                edge_index=data.edge_index,
+            )
+
+            if cfg.posenc_ARRWPE.dim_reduction == 'LinearProjection':
+                cfg.posenc_ARRWPE.dim_reduced = data.node_arrwp_reduced.shape[-1]
 
     # Approximated Random Walk Positional Encoding.
     if 'ARWPE' in pe_types:
@@ -154,6 +183,7 @@ def compute_posenc_stats(data, pe_types, is_undirected, cfg):
             scale=cfg.posenc_ARWPE.scale,
         )
         data.pestat_ARWPE = arwpe
+        data.node_arwpe = arwpe
 
     # Approximated Random Walks Structural Encoding.
     if 'ARWSE' in pe_types:
@@ -169,6 +199,7 @@ def compute_posenc_stats(data, pe_types, is_undirected, cfg):
             scale=cfg.posenc_ARWSE.scale,
         )
         data.pestat_ARWSE = arwse
+        data.node_arwse = arwse
 
     # Heat Kernels.
     if 'HKdiagSE' in pe_types or 'HKfullPE' in pe_types:
@@ -292,6 +323,48 @@ def get_rw_landing_probs(ksteps, edge_index, edge_weight=None,
         for k in ksteps:
             rws.append(torch.diagonal(P.matrix_power(k), dim1=-2, dim2=-1) * \
                        (k ** (space_dim / 2)))
+    rw_landing = torch.cat(rws, dim=0).transpose(0, 1)  # (Num nodes) x (K steps)
+
+    return rw_landing
+
+
+def get_rwpe_matrix(ksteps, edge_index, edge_weight=None, num_nodes=None):
+    """Compute the RWPE matrix.
+
+    Args:
+        ksteps: List of k-steps for which to compute the RW landings
+        edge_index: PyG sparse representation of the graph
+        edge_weight: (optional) Edge weights
+        num_nodes: (optional) Number of nodes in the graph
+
+    Returns:
+        2D Tensor with shape (num_nodes, len(ksteps))
+    """
+    if edge_weight is None:
+        edge_weight = torch.ones(edge_index.size(1), device=edge_index.device)
+    num_nodes = maybe_num_nodes(edge_index, num_nodes)
+    source, dest = edge_index[0], edge_index[1]
+    deg = scatter_add(edge_weight, source, dim=0, dim_size=num_nodes)  # Out degrees.
+    deg_inv = deg.pow(-1.)
+    deg_inv.masked_fill_(deg_inv == float('inf'), 0)
+
+    if edge_index.numel() == 0:
+        P = edge_index.new_zeros((1, num_nodes, num_nodes))
+    else:
+        # P = D^-1 * A
+        P = torch.diag(deg_inv) @ to_dense_adj(edge_index, max_num_nodes=num_nodes)  # 1 x (Num nodes) x (Num nodes)
+    rws = []
+    if ksteps == list(range(min(ksteps), max(ksteps) + 1)):
+        # Efficient way if ksteps are a consecutive sequence (most of the time the case)
+        Pk = P.clone().detach().matrix_power(min(ksteps))
+        for k in range(min(ksteps), max(ksteps) + 1):
+            rws.append(Pk.sum(-2) - torch.diagonal(Pk, dim1=-2, dim2=-1))
+            Pk = Pk @ P
+    else:
+        # Explicitly raising P to power k for each k \in ksteps.
+        for k in ksteps:
+            Pk = P.matrix_power(k)
+            rws.append(Pk.sum(-2) - torch.diagonal(Pk, dim1=-2, dim2=-1))
     rw_landing = torch.cat(rws, dim=0).transpose(0, 1)  # (Num nodes) x (K steps)
 
     return rw_landing

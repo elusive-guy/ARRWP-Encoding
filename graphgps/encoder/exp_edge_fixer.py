@@ -48,6 +48,9 @@ class ExpanderEdgeFixer(nn.Module):
             if not hasattr(batch, 'expander_edges'):
                 raise ValueError('expander edges not stored in data')
 
+            if 'node_arrwp_reduced' in batch:
+                del batch['node_arrwp_reduced']
+            
             data_list = batch.to_data_list()
             exp_edges = []
             cumulative_num_nodes = 0

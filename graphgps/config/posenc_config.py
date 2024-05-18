@@ -11,6 +11,7 @@ def set_cfg_posenc(cfg):
     cfg.posenc_LapPE = CN()
     cfg.posenc_SignNet = CN()
     cfg.posenc_RWSE = CN()
+    cfg.posenc_RWPE = CN()
     cfg.posenc_RRWPE = CN()
     cfg.posenc_ARRWPE = CN()
     cfg.posenc_ARWPE = CN()
@@ -24,8 +25,8 @@ def set_cfg_posenc(cfg):
     cfg.posenc_ERE = CN() #Effective Resistance for Edges
 
     # Common arguments to all PE types.
-    for name in ['posenc_LapPE', 'posenc_SignNet',
-                 'posenc_RWSE', 'posenc_RRWPE', 'posenc_ARRWPE', 'posenc_ARWPE',
+    for name in ['posenc_LapPE', 'posenc_SignNet', 'posenc_RWSE',
+                 'posenc_RWPE', 'posenc_RRWPE', 'posenc_ARRWPE', 'posenc_ARWPE',
                  'posenc_ARWSE', 'posenc_HKdiagSE', 'posenc_ElstaticSE',
                  'posenc_ERN', 'posenc_ERE']:
         pecfg = getattr(cfg, name)
@@ -78,7 +79,7 @@ def set_cfg_posenc(cfg):
     cfg.posenc_SignNet.phi_out_dim = 4
     cfg.posenc_SignNet.phi_hidden_dim = 64
 
-    for name in ['posenc_RWSE', 'posenc_HKdiagSE', 'posenc_ElstaticSE']:
+    for name in ['posenc_RWSE', 'posenc_RWPE', 'posenc_HKdiagSE', 'posenc_ElstaticSE']:
         pecfg = getattr(cfg, name)
 
         # Config for Kernel-based PE specific options.
@@ -99,6 +100,11 @@ def set_cfg_posenc(cfg):
 
         pecfg.window_size = None
         pecfg.scale = True
+
+    # Reduction arguments for ARRWPE.
+    # cfg.posenc_ARRWPE.dim_reduction = 'TruncatedSVD'
+    cfg.posenc_ARRWPE.dim_reduction = None
+    cfg.posenc_ARRWPE.dim_reduced = None
 
     # Additional arguments for RRWPE.
     cfg.posenc_RRWPE.enable = False

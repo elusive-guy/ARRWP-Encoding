@@ -10,6 +10,8 @@ def set_cfg_preprocess(cfg):
 
     cfg.prep = CN()
 
+    cfg.prep.coalesce_edges = True
+
     # Argument group for adding expander edges
 
     # if it's enabled expander edges would be available by e.g. data.expander_edges

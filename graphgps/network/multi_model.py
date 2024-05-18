@@ -69,24 +69,73 @@ class FeatureEncoder(torch.nn.Module):
                  fill_value=0.
                  )
 
+        if cfg.posenc_RWPE.enable:
+            self.rwp_encoder = ARRWPLinearNodeEncoder(
+                len(cfg.posenc_RWPE.kernel.times),
+                cfg.gt.dim_hidden,
+                norm_type=cfg.posenc_RWPE.raw_norm_type,
+                mx_name='rwpe',
+            )
+
+        if cfg.posenc_RWSE.enable:
+            self.rws_encoder = ARRWPLinearNodeEncoder(
+                len(cfg.posenc_RWSE.kernel.times),
+                cfg.gt.dim_hidden,
+                norm_type=cfg.posenc_RWSE.raw_norm_type,
+                mx_name='rwse',
+            )
+
         if cfg.posenc_ARRWPE.enable:
             window_size = cfg.posenc_ARRWPE.window_size
             if window_size is None or window_size == 'none':
                 window_size = cfg.prep.random_walks.walk_length
 
-            self.arrwp_abs_encoder = ARRWPLinearNodeEncoder(
+            if cfg.posenc_ARRWPE.dim_reduction is None:
+                self.arrwp_abs_encoder = ARRWPLinearNodeEncoder(
+                    window_size,
+                    cfg.gt.dim_hidden,
+                    norm_type=cfg.posenc_ARRWPE.raw_norm_type,
+                )
+
+                if not hasattr(cfg.gt, 'dim_edge') or cfg.gt.dim_edge is None:
+                    cfg.gt.dim_edge = cfg.gt.dim_hidden
+                
+                self.arrwp_rel_encoder = ARRWPLinearEdgeEncoder(
+                    window_size,
+                    cfg.gt.dim_edge,
+                    norm_type=cfg.posenc_ARRWPE.raw_norm_type,
+                )
+                
+            else:
+                self.arrwp_abs_encoder = ARRWPLinearNodeEncoder(
+                    cfg.posenc_ARRWPE.dim_reduced,
+                    cfg.gt.dim_hidden,
+                    norm_type=cfg.posenc_ARRWPE.raw_norm_type,
+                    mx_name='arrwp_reduced',
+                )
+
+        if cfg.posenc_ARWPE.enable:
+            window_size = cfg.posenc_ARWPE.window_size
+            if window_size is None or window_size == 'none':
+                window_size = cfg.prep.random_walks.walk_length
+
+            self.arwp_encoder = ARRWPLinearNodeEncoder(
                 window_size,
                 cfg.gt.dim_hidden,
-                norm_type=cfg.posenc_ARRWPE.raw_norm_type,
+                norm_type=cfg.posenc_ARWPE.raw_norm_type,
+                mx_name='arwpe',
             )
 
-            if not hasattr(cfg.gt, 'dim_edge') or cfg.gt.dim_edge is None:
-                cfg.gt.dim_edge = cfg.gt.dim_hidden
-            
-            self.arrwp_rel_encoder = ARRWPLinearEdgeEncoder(
+        if cfg.posenc_ARWSE.enable:
+            window_size = cfg.posenc_ARWSE.window_size
+            if window_size is None or window_size == 'none':
+                window_size = cfg.prep.random_walks.walk_length
+
+            self.arws_encoder = ARRWPLinearNodeEncoder(
                 window_size,
-                cfg.gt.dim_edge,
-                norm_type=cfg.posenc_ARRWPE.raw_norm_type,
+                cfg.gt.dim_hidden,
+                norm_type=cfg.posenc_ARWSE.raw_norm_type,
+                mx_name='arwse',
             )
 
         if 'Exphormer' in cfg.gt.layer_type:
