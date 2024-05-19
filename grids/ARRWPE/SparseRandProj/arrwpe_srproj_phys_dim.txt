@@ -1,0 +1,2 @@
+wandb.project project ['physics-dim-grid-arrwpe-srproj']
+posenc_ARRWPE.dim_reduced dim_reduced [2, 4, 8, 16, 32, 64, 128, 256]

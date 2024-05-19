@@ -1,0 +1,2 @@
+wandb.project project ['arxiv-dim-grid-arrwpe-rproj']
+posenc_ARRWPE.dim_reduced dim_reduced [2, 4, 8, 16, 32, 64, 128, 256]

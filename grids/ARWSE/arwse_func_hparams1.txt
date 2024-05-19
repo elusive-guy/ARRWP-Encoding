@@ -1,0 +1,4 @@
+wandb.project project ['func-grid1-arwse']
+prep.random_walks.n_walks n_walks [100]
+prep.random_walks.p p [0.25,0.50,1.0,2.0,4.0]
+posenc_ARWSE.window_size window_size ['none']

@@ -1,0 +1,8 @@
+wandb.project project ['cs-grid-arwpe']
+prep.random_walks.walk_length walk_length [2,4,8,16,32,64,128,256]
+prep.random_walks.n_walks n_walks [1000]
+prep.random_walks.p p [0.25,0.50,1.0,2.0,4.0]
+prep.random_walks.q q [0.25,0.50,1.0,2.0,4.0]
+posenc_ARWPE.window_size window_size ['none']
+# gt.layer_type layer_type ['GCN+Exphormer','CustomGatedGCN+Exphormer']
+# posenc_ARWPE.raw_norm_type raw_norm_type ['none','batchnorm']

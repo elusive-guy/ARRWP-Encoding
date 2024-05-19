@@ -1,0 +1,2 @@
+wandb.project project ['physics-n_walks-grid-arrwpe']
+prep.random_walks.n_walks n_walks [0, 10, 100, 1000, 10000]
